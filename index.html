@@ -20,20 +20,46 @@
     border-radius: 10px;
     box-shadow: 0 0 20px black;
   }
-  input {
-    padding: 10px;
+  .option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .option-row h3,
+  .option-row p {
+    flex: 1;
+    margin: 0;
+    text-align: left;
+  }
+  hr {
+    border: 0;
+    height: 1px;
+    background: #555;
+    margin: 10px 0;
+  }
+  input[type="checkbox"] {
+    transform: scale(2);
+    margin-left: 10px;
+  }
+  input[type="number"] {
+    padding: 8px;
     font-size: 16px;
-    margin-top: 10px;
-    width: 85%;
     border-radius: 5px;
-    border: none;
+    border: 2px solid #555;
     background-color: #444;
     color: white;
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+    text-align: center;
+    width: 200px;
+    margin: 10px 0;
+  }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: #777;
   }
   button {
     padding: 10px 20px;
-    margin-top: 10px;
+    margin-top: 30px;
     background-color: #555;
     border: none;
     color: white;
@@ -48,10 +74,6 @@
     margin-top: 20px;
     font-size: 20px;
     font-weight: bold;
-  }
-  #result {
-    margin-top: 15px;
-    font-size: 18px;
   }
   .coin {
     width: 100px;
@@ -77,59 +99,63 @@
     border-radius: 50%;
     pointer-events: none;
   }
-  .hidden {
-    display: none;
-  }
-  small {
-    color: #bbb;
-  }
+  .hidden { display: none; }
+  small { color: #bbb; }
 </style>
 </head>
 <body>
-
 <div id="start-screen" class="container">
   <h1>Coinflip Simulation</h1>
-  <label>Chance for Heads (%):</label><br>
-  <input type="number" id="headsChance" value="60" min="20" max="80"><br>
+  <hr>
+  <div class="option-row">
+    <h3>Rigged Chances</h3>
+    <p>Increase the chances of winning by 10%</p>
+    <input type="checkbox" id="riggedToggle">
+  </div>
+  <div class="option-row">
+    <h3>All In</h3>
+    <p>Bet all your money each flip</p>
+    <input type="checkbox" id="allInToggle">
+  </div>
+  <hr>
   <button onclick="startGame()">Start</button>
 </div>
-
 <div id="game-screen" class="container hidden">
   <h1>Coin Flip Gamble</h1>
   <small id="chanceText"></small>
   <div class="coin" id="coin" style="background-image: url('https://img.icons8.com/dusk/64/abraham-lincoln.png');"></div>
-  <label for="bet">Enter your bet:</label><br>
+  <label for="bet" id="betLabel">Enter your bet:</label><br>
   <input type="number" id="bet" min="1"><br>
   <p>You are betting on: Heads</p>
   <button onclick="flipCoin()" id="flipBtn">Flip Coin</button>
   <p id="result"></p>
   <p id="money-display">Money: $100</p>
 </div>
-
 <div id="lose-screen" class="container hidden">
   <h1>You lost all your money!</h1>
   <p id="stats"></p>
   <button onclick="goToStart()">Restart</button>
 </div>
-
 <script>
   let money = 100;
   let maxMoney = 100;
-  let headsProbability = 0.6;
+  let headsProbability = 0.5;
   let canFlip = true;
+  let rigged = false;
+  let allIn = false;
   const headsImg = "https://img.icons8.com/dusk/64/abraham-lincoln.png";
   const tailsImg = "https://img.icons8.com/ios-glyphs/30/FFFFFF/cottage.png";
 
   function startGame() {
-    let inputVal = parseInt(document.getElementById('headsChance').value);
-    if (inputVal < 20) inputVal = 20;
-    if (inputVal > 80) inputVal = 80;
-    document.getElementById('headsChance').value = inputVal;
-    headsProbability = inputVal / 100;
+    rigged = document.getElementById('riggedToggle').checked;
+    allIn = document.getElementById('allInToggle').checked;
+    headsProbability = rigged ? 0.6 : 0.5;
     money = 100;
     maxMoney = 100;
     document.getElementById('chanceText').textContent = `Heads chance: ${Math.round(headsProbability*100)}%`;
     document.getElementById('money-display').textContent = `Money: $${money}`;
+    document.getElementById('bet').classList.toggle('hidden', allIn);
+    document.getElementById('betLabel').classList.toggle('hidden', allIn);
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
   }
@@ -141,8 +167,8 @@
 
   function flipCoin() {
     if (!canFlip) return;
-    let bet = parseInt(document.getElementById('bet').value);
-    if (isNaN(bet) || bet <= 0) {
+    let bet = allIn ? money : parseInt(document.getElementById('bet').value);
+    if (!allIn && (isNaN(bet) || bet <= 0)) {
       document.getElementById('result').textContent = "Enter a valid bet!";
       return;
     }
@@ -151,7 +177,6 @@
       return;
     }
     canFlip = false;
-
     const coin = document.getElementById('coin');
     coin.style.transform = 'rotateY(720deg)';
     setTimeout(() => {
@@ -159,7 +184,6 @@
       let outcome = isHeads ? 'Heads' : 'Tails';
       coin.style.transform = 'rotateY(0deg)';
       coin.style.backgroundImage = isHeads ? `url('${headsImg}')` : `url('${tailsImg}')`;
-
       if (outcome === 'Heads') {
         money += bet;
         document.getElementById('result').textContent = `Coin landed on ${outcome}. You win $${bet}!`;
@@ -167,24 +191,18 @@
         money -= bet;
         document.getElementById('result').textContent = `Coin landed on ${outcome}. You lost $${bet}.`;
       }
-
       if (money > maxMoney) maxMoney = money;
-
       document.getElementById('money-display').textContent = `Money: $${money}`;
-
       if (money <= 0) {
         setTimeout(() => {
-          let winChance = headsProbability*100;
-          document.getElementById('stats').textContent = `Highest money reached: $${maxMoney} | Rigged chance: ${winChance.toFixed(1)}%`;
+          document.getElementById('stats').textContent = `Highest money reached: $${maxMoney} | Rigged: ${rigged ? 'Yes' : 'No'}`;
           document.getElementById('game-screen').classList.add('hidden');
           document.getElementById('lose-screen').classList.remove('hidden');
         }, 2000);
       }
-
       setTimeout(() => canFlip = true, 1000);
     }, 1000);
   }
 </script>
-
 </body>
 </html>
